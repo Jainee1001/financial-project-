@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock overview and today’s trend</title>
+  <style>
+    :root {
+      --bg: #091123;
+      --panel: #111d35;
+      --panel-soft: #0d182d;
+      --border: #263c69;
+      --text: #e6efff;
+      --muted: #9db2d8;
+      --accent: #5ec5ff;
+      --green: #40d787;
+      --red: #ff6b78;
+      --yellow: #ffd166;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 20% 0%, #102244, var(--bg) 50%);
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .title { margin: 0 0 20px; }
+    .section-heading { margin: 0 0 12px; font-size: 1.25rem; }
+    .muted { color: var(--muted); }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel-soft));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .stock-chart-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .info-panel h3 { margin-top: 4px; margin-bottom: 8px; }
+    .stock-field { margin-bottom: 14px; }
+    .stock-field-label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .stock-field p { margin: 0; }
+    .company-name { margin: 0; font-size: 1.35rem; }
+    .price { font-size: 36px; color: var(--accent); margin: 0; font-weight: 700; line-height: 1.2; }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .trend {
+      margin-top: 12px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .trend.upward { color: var(--green); }
+    .trend.downward { color: var(--red); }
+    .trend.stable { color: var(--yellow); }
+
+    .info-panel {
+      min-width: 0;
+    }
+    .chart-card {
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+    }
+    .chart-wrap {
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 200px;
+      position: relative;
+    }
+    .chart-wrap canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .literacy-section { margin-top: 8px; }
+    .literacy-section > h2 { margin-bottom: 8px; }
+    .literacy-intro {
+      max-width: 72ch;
+      margin: 0 0 20px;
+      line-height: 1.6;
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .term-card {
+      background: linear-gradient(165deg, var(--panel) 0%, var(--panel-soft) 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+      border-left: 4px solid var(--accent);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .term-card-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(38, 60, 105, 0.6);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .term-card-title-wrap { min-width: 0; }
+    .term-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+    }
+
+    .term-category {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .term-index {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(94, 197, 255, 0.12);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .term-card-body {
+      padding: 14px 16px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .term-definition {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .term-example {
+      margin: 0;
+      padding: 10px 12px;
+      background: rgba(90, 245, 168, 0.08);
+      border-radius: 8px;
+      border-left: 3px solid var(--green);
+      font-size: 14px;
+      line-height: 1.5;
+      color: #c5e9d6;
+    }
+
+    .term-example strong { color: var(--green); }
+
+    .term-related {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    @media (max-width: 860px) {
+      .stock-chart-layout {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+      .chart-card {
+        height: auto;
+        min-height: 300px;
+      }
+      .chart-wrap {
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Stock overview and today’s trend</h1>
+
+    <h2 class="section-heading">Company snapshot and price chart</h2>
+    <div class="card stock-chart-layout">
+      <div class="info-panel">
+        <span class="pill">Selected stock</span>
+        <div class="stock-field">
+          <span class="stock-field-label">Company name</span>
+          <h3 class="company-name">Tata Consultancy Services (TCS)</h3>
+        </div>
+        <div class="stock-field">
+          <span class="stock-field-label">Current stock price</span>
+          <div class="price" id="currentPrice">₹3,920.40</div>
+        </div>
+        <div class="stock-field">
+          <span class="stock-field-label">Market sector</span>
+          <p>Information Technology (IT Services)</p>
+        </div>
+        <div class="stock-field">
+          <span class="stock-field-label">Brief company description</span>
+          <p class="muted" style="margin: 0;">
+            Tata Consultancy Services (TCS) is one of India’s largest IT services firms and part of the Tata Group. It helps businesses
+            worldwide with software development, technology consulting, cloud and digital transformation, and business process services.
+            Clients span banking, retail, healthcare, and manufacturing; TCS operates across many countries and is known for large-scale
+            delivery of technology projects and long-term outsourcing partnerships. The company is listed on Indian stock exchanges and is
+            widely followed in the IT sector.
+          </p>
+        </div>
+        <p id="trendResult" class="trend"></p>
+      </div>
+      <div class="chart-card">
+        <div class="chart-wrap">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <section class="literacy-section card" style="margin-top: 28px;">
+      <h2 class="section-heading">Financial literacy glossary</h2>
+      <p class="literacy-intro muted">
+        These are short, accurate explanations of words you will see when you read about stocks and markets.
+        Each card has a definition plus a simple example you can relate to a company like TCS or your own savings.
+      </p>
+      <div class="terms-grid" id="termsGrid"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const glossaryTerms = [
+      {
+        term: "Stock",
+        category: "Equity",
+        definition: "A stock (also called equity) is a financial instrument that represents part-ownership of a listed company. Owning stock usually gives you a claim on the firm’s value and may include voting rights at annual meetings, depending on the share class.",
+        example: "If TCS has millions of shares outstanding and you buy some of them, you own a fraction of TCS proportional to how many shares you hold.",
+        related: "The words “stock” and “shares” are often used interchangeably in everyday language; “share” stresses one unit."
+      },
+      {
+        term: "Share",
+        category: "Unit of ownership",
+        definition: "A share is a single unit of stock. Companies divide their ownership into a fixed number of shares; each share represents an equal slice of that ownership (for ordinary shares of the same class).",
+        example: "An order for “10 shares of TCS” means you are buying exactly ten units of its listed stock.",
+        related: "Price quotes (e.g. ₹3,920) are almost always quoted <strong>per share</strong>, not for the whole company."
+      },
+      {
+        term: "Investment",
+        category: "Using money to earn returns",
+        definition: "An investment is money you commit to an asset (stocks, bonds, funds, property, etc.) expecting income and/or price gains over time. It implies tying up capital and accepting uncertainty about the outcome.",
+        example: "Putting savings into a diversified equity fund for five years is an investment; keeping cash only in a savings account is usually seen as saving, with lower expected long-term return.",
+        related: "Return is never guaranteed; time horizon and costs (fees, taxes) matter as much as the asset name."
+      },
+      {
+        term: "Profit",
+        category: "Income statement",
+        definition: "Profit is what remains when revenues exceed expenses over a period. For a company, net profit (after tax) is a common headline figure; for you as an investor, profit on a stock is typically sale price minus purchase price and costs.",
+        example: "If you buy shares at ₹3,800 and sell at ₹3,950, your gross trading profit before tax and charges is ₹150 per share.",
+        related: "Company profit and <strong>share price</strong> move on different timelines — good earnings do not always mean the stock rises that day."
+      },
+      {
+        term: "Risk",
+        category: "Uncertainty of outcomes",
+        definition: "Risk is the possibility that the actual return differs from what you expected — including partial or total loss. In markets it comes from prices, interest rates, company performance, liquidity, and behaviour (panic selling, etc.).",
+        example: "Equities can fall sharply in a bad week; that volatility is one form of risk even if the company is still sound.",
+        related: "Higher potential return is usually paired with higher risk; diversification reduces concentration risk, not all risk."
+      },
+      {
+        term: "Dividend",
+        category: "Cash return to shareholders",
+        definition: "A dividend is cash (sometimes stock) that a company distributes from profits to shareholders on a per-share basis. It is optional — boards decide timing and amount — and may be skipped in tough years.",
+        example: "If TCS declares ₹10 per share dividend and you own 100 shares, you receive ₹1,000 before tax, subject to rules in your jurisdiction.",
+        related: "On the ex-dividend date, the share price often drops roughly by the dividend amount; total wealth is not “free money” from thin air."
+      },
+      {
+        term: "Market",
+        category: "Where trading happens",
+        definition: "A market is the system where buyers and sellers trade securities, commodities, or other assets. Stock markets (e.g. NSE, BSE) provide listing, rules, clearing, and price discovery so participants can transact with transparency.",
+        example: "When people say “the market was up today,” they often mean a broad index (like Nifty 50) rose on average, not that every stock went up.",
+        related: "Liquidity — being able to buy or sell quickly near the quoted price — depends on how active that stock’s market is."
+      }
+    ];
+
+    (function renderGlossary() {
+      var grid = document.getElementById("termsGrid");
+      glossaryTerms.forEach(function (item, index) {
+        var article = document.createElement("article");
+        article.className = "term-card";
+
+        var header = document.createElement("div");
+        header.className = "term-card-header";
+
+        var titleWrap = document.createElement("div");
+        titleWrap.className = "term-card-title-wrap";
+
+        var cat = document.createElement("span");
+        cat.className = "term-category";
+        cat.textContent = item.category;
+
+        var h3 = document.createElement("h3");
+        h3.textContent = item.term;
+
+        titleWrap.appendChild(cat);
+        titleWrap.appendChild(h3);
+
+        var idx = document.createElement("span");
+        idx.className = "term-index";
+        idx.textContent = String(index + 1);
+
+        header.appendChild(titleWrap);
+        header.appendChild(idx);
+
+        var body = document.createElement("div");
+        body.className = "term-card-body";
+
+        var defP = document.createElement("p");
+        defP.className = "term-definition";
+        defP.textContent = item.definition;
+
+        var exP = document.createElement("p");
+        exP.className = "term-example";
+        exP.innerHTML = "<strong>Example</strong> — " + item.example;
+
+        var relP = document.createElement("p");
+        relP.className = "term-related";
+        relP.innerHTML = "<strong>Note</strong> — " + item.related;
+
+        body.appendChild(defP);
+        body.appendChild(exP);
+        body.appendChild(relP);
+
+        article.appendChild(header);
+        article.appendChild(body);
+        grid.appendChild(article);
+      });
+    })();
+
+    /** NSE-style open time: minutes-from-open used as x in regression (today only). */
+    const MARKET_OPEN = { h: 9, m: 15 };
+    /** 2–3 future points today, same trend line (after last actual print). */
+    const PREDICTION_STEPS = [
+      { time: "15:05", label: "15:05 (est.)" },
+      { time: "15:17", label: "15:17 (est.)" },
+      { time: "15:30", label: "15:30 (est.)" }
+    ];
+
+    /**
+     * Higher-granularity demo: ~20-minute spacing, intraday TODAY only (sample, not live).
+     */
+    /** Net upward drift so regression EOD vs open clears the “stable” band (not flat noise). */
+    const intradayToday = [
+      { time: "09:15", price: 3904.5 },
+      { time: "09:35", price: 3906.1 },
+      { time: "09:55", price: 3905.4 },
+      { time: "10:15", price: 3908.2 },
+      { time: "10:35", price: 3910.0 },
+      { time: "10:55", price: 3909.3 },
+      { time: "11:15", price: 3912.6 },
+      { time: "11:35", price: 3911.8 },
+      { time: "11:55", price: 3914.5 },
+      { time: "12:15", price: 3916.2 },
+      { time: "12:35", price: 3915.6 },
+      { time: "12:55", price: 3917.9 },
+      { time: "13:15", price: 3919.4 },
+      { time: "13:35", price: 3918.8 },
+      { time: "13:55", price: 3921.5 },
+      { time: "14:15", price: 3922.1 },
+      { time: "14:35", price: 3920.7 },
+      { time: "14:55", price: 3923.6 }
+    ];
+
+    function minutesFromMidnight(timeStr) {
+      var p = timeStr.split(":");
+      return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+    }
+
+    function minutesFromOpen(timeStr) {
+      var open = MARKET_OPEN.h * 60 + MARKET_OPEN.m;
+      return minutesFromMidnight(timeStr) - open;
+    }
+
+    function pricesFromTodayData(rows) {
+      return rows.map(function (r) { return r.price; });
+    }
+
+    function linearRegression(xs, ys) {
+      var n = xs.length;
+      if (n === 0) return { m: 0, b: 0 };
+      if (n === 1) return { m: 0, b: ys[0] };
+      var sumX = 0;
+      var sumY = 0;
+      var sumXY = 0;
+      var sumXX = 0;
+      for (var i = 0; i < n; i++) {
+        sumX += xs[i];
+        sumY += ys[i];
+        sumXY += xs[i] * ys[i];
+        sumXX += xs[i] * xs[i];
+      }
+      var denom = n * sumXX - sumX * sumX;
+      if (Math.abs(denom) < 1e-9) return { m: 0, b: sumY / n };
+      var m = (n * sumXY - sumX * sumY) / denom;
+      var b = (sumY - m * sumX) / n;
+      return { m: m, b: b };
+    }
+
+    function rSquared(xs, ys, m, b) {
+      var n = ys.length;
+      if (n < 2) return 1;
+      var meanY = ys.reduce(function (a, v) { return a + v; }, 0) / n;
+      var ssTot = 0;
+      var ssRes = 0;
+      for (var i = 0; i < n; i++) {
+        var pred = m * xs[i] + b;
+        ssTot += (ys[i] - meanY) * (ys[i] - meanY);
+        ssRes += (ys[i] - pred) * (ys[i] - pred);
+      }
+      if (ssTot < 1e-9) return 1;
+      return 1 - ssRes / ssTot;
+    }
+
+    function predictFromTrend(rows, futureSteps) {
+      var xs = rows.map(function (r) { return minutesFromOpen(r.time); });
+      var ys = rows.map(function (r) { return r.price; });
+      var reg = linearRegression(xs, ys);
+      var prices = futureSteps.map(function (step) {
+        var x = minutesFromOpen(step.time);
+        return Math.round((reg.m * x + reg.b) * 100) / 100;
+      });
+      return {
+        prices: prices,
+        eodPrice: prices[prices.length - 1],
+        slopePerMin: reg.m,
+        r2: rSquared(xs, ys, reg.m, reg.b)
+      };
+    }
+
+    function trendType(values, predicted) {
+      var first = values[0];
+      var percent = ((predicted - first) / first) * 100;
+      if (percent > 0.08) return { type: "upward", text: "Prediction: Upward (today)" };
+      if (percent < -0.08) return { type: "downward", text: "Prediction: Downward (today)" };
+      return { type: "stable", text: "Prediction: Stable (today)" };
+    }
+
+    var todayPrices = pricesFromTodayData(intradayToday);
+    var predResult = predictFromTrend(intradayToday, PREDICTION_STEPS);
+    var predictedPrices = predResult.prices;
+    var predictedPrice = predResult.eodPrice;
+    var predLabels = PREDICTION_STEPS.map(function (s) { return s.label; });
+    var labels = intradayToday.map(function (r) { return r.time; }).concat(predLabels);
+
+    var historicalDataset = todayPrices.concat(new Array(PREDICTION_STEPS.length).fill(null));
+    var predictionDataset = new Array(todayPrices.length - 1).fill(null)
+      .concat([todayPrices[todayPrices.length - 1]].concat(predictedPrices));
+
+    var trend = trendType(todayPrices, predictedPrice);
+    var trendEl = document.getElementById("trendResult");
+    trendEl.textContent = trend.text + " | Ahead (est., same trend): " + predictedPrices.map(function (p) {
+      return "₹" + p.toFixed(2);
+    }).join(" → ");
+    trendEl.classList.add(trend.type);
+    document.getElementById("currentPrice").textContent =
+      "₹" + todayPrices[todayPrices.length - 1].toFixed(2);
+
+    var canvasEl = document.getElementById("trendChart");
+    var chartCtx = canvasEl.getContext("2d");
+    var gradH = 280;
+    var grad = chartCtx.createLinearGradient(0, 0, 0, gradH);
+    grad.addColorStop(0, "rgba(94, 197, 255, 0.42)");
+    grad.addColorStop(0.5, "rgba(94, 197, 255, 0.12)");
+    grad.addColorStop(1, "rgba(94, 197, 255, 0)");
+
+    var yMin = Math.min.apply(null, todayPrices.concat(predictedPrices));
+    var yMax = Math.max.apply(null, todayPrices.concat(predictedPrices));
+    var yPad = Math.max(2, (yMax - yMin) * 0.08);
+
+    new Chart(canvasEl, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Today (actual)",
+            data: historicalDataset,
+            borderColor: "#7dd8ff",
+            backgroundColor: grad,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 9,
+            pointBackgroundColor: "#0a1a32",
+            pointBorderColor: "#7dd8ff",
+            pointBorderWidth: 2,
+            tension: 0.32,
+            fill: true,
+            spanGaps: true
+          },
+          {
+            label: "Today (projected, 3 points)",
+            data: predictionDataset,
+            borderColor: "#5af5a8",
+            backgroundColor: "rgba(90, 245, 168, 0.08)",
+            borderDash: [10, 5],
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 10,
+            pointBackgroundColor: "#0a1a32",
+            pointBorderColor: "#5af5a8",
+            pointBorderWidth: 2,
+            tension: 0.25,
+            fill: false,
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 4, right: 8, bottom: 4, left: 4 } },
+        animation: { duration: 650, easing: "easeOutQuart" },
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          title: {
+            display: true,
+            text: "Sample prices today + three trend-based projections (15:05, 15:17, 15:30)",
+            color: "#9db2d8",
+            font: { size: 13, weight: "600" }
+          },
+          legend: {
+            labels: {
+              color: "#e6efff",
+              usePointStyle: true,
+              padding: 16
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(17, 29, 53, 0.95)",
+            borderColor: "#263c69",
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              title: function(items) {
+                if (!items.length) return "";
+                return items[0].label;
+              },
+              label: function(context) {
+                if (context.parsed.y === null || context.parsed.y === undefined) return "";
+                return context.dataset.label + ": ₹" + context.parsed.y.toFixed(2);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#9db2d8",
+              maxRotation: 50,
+              autoSkip: true,
+              maxTicksLimit: 14
+            },
+            grid: { color: "rgba(157,178,216,0.1)" }
+          },
+          y: {
+            min: yMin - yPad,
+            max: yMax + yPad,
+            ticks: {
+              color: "#9db2d8",
+              maxTicksLimit: 8,
+              callback: function(value) { return "₹" + Number(value).toFixed(0); }
+            },
+            grid: { color: "rgba(157,178,216,0.12)" }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
